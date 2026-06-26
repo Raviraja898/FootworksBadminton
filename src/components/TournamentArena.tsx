@@ -98,6 +98,12 @@ export default function TournamentArena({
     return names.join(" & ");
   };
 
+  const getTeamMemberNames = (playerIds: string[]) => {
+    return playerIds
+      .map(id => players.find(p => p.id === id)?.name || "Unknown")
+      .join(", ");
+  };
+
   const initializeManualTeams = () => {
     if (format === "singles") {
       setManualTeams([]);
@@ -795,13 +801,13 @@ export default function TournamentArena({
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
               <Users className="h-4 w-4 text-emerald-500" /> FORMED TEAMS IN ROTATION
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {activeTeams.map((team, idx) => (
                 <div key={team.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-200/50 text-center shadow-xxs hover:bg-slate-100/50 transition-all">
-                  <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest block mb-1">
+                  <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest block mb-2">
                     TEAM {idx + 1}
                   </span>
-                  <p className="text-xs font-black text-slate-800 leading-snug">{team.name}</p>
+                  <p className="text-xs font-bold text-slate-900 leading-snug">{getTeamMemberNames(team.playerIds)}</p>
                 </div>
               ))}
             </div>
@@ -857,10 +863,7 @@ export default function TournamentArena({
                   </thead>
                   <tbody>
                     {calculateTeamStandings(activeTeams, activeMatches).map((teamStat, idx) => {
-                      const isTop4 = idx < 4;
-                      const isTop2 = idx < 2;
-                      const qualifiesForSemis = activeTeams.length >= 4 && isTop4;
-                      const qualifiesForFinals = activeTeams.length < 4 && isTop2;
+                      const teamData = activeTeams.find(t => t.id === teamStat.teamId);
                       
                       return (
                         <tr key={teamStat.teamId} className="border-b border-slate-50 hover:bg-slate-50/50">
@@ -878,13 +881,8 @@ export default function TournamentArena({
                             </span>
                           </td>
                           <td className="py-3 px-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-black text-slate-900">{teamStat.teamName}</span>
-                              {(qualifiesForSemis || qualifiesForFinals) && (
-                                <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
-                                  {activeTeams.length >= 4 ? "Qualifies for Semis" : "Qualifies for Finals"}
-                                </span>
-                              )}
+                            <div className="flex flex-col gap-1">
+                              <span className="font-black text-slate-900">{teamData ? getTeamMemberNames(teamData.playerIds) : teamStat.teamName}</span>
                             </div>
                           </td>
                           <td className="py-3 px-3 text-center font-mono">{teamStat.played}</td>
