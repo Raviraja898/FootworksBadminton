@@ -1,0 +1,6 @@
+{
+  "name": "Footworks Badminton Tournaments",
+  "description": "Badminton tournament scheduler, round-robin matchmaker, statistics tracker, and live scoring system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidPlayer(data) {
+      return data.keys().hasAll(['id', 'name', 'joinedAt']) &&
+             data.keys().size() == 3 &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.joinedAt is string && data.joinedAt.size() <= 100;
+    }
+
+    function isValidTournament(data) {
+      return data.keys().hasAll(['id', 'name', 'date', 'winner1Id', 'isHistorical']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 150 &&
+             data.date is string && data.date.size() <= 50 &&
+             data.winner1Id is string && data.winner1Id.size() <= 128 &&
+             data.isHistorical is bool &&
+             (!data.keys().hasAny(['winner2Id']) || (data.winner2Id is string && data.winner2Id.size() <= 128)) &&
+             (!data.keys().hasAny(['runnerUp1Id']) || (data.runnerUp1Id is string && data.runnerUp1Id.size() <= 128)) &&
+             (!data.keys().hasAny(['runnerUp2Id']) || (data.runnerUp2Id is string && data.runnerUp2Id.size() <= 128)) &&
+             (!data.keys().hasAny(['scoreSummary']) || (data.scoreSummary is string && data.scoreSummary.size() <= 100));
+    }
+
+    function isValidMatch(data) {
+      return data.keys().hasAll(['id', 'tournamentId', 'team1', 'team2', 'score1', 'score2', 'status', 'date']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.tournamentId is string && data.tournamentId.size() <= 128 &&
+             data.team1 is list && data.team1.size() <= 4 &&
+             data.team2 is list && data.team2.size() <= 4 &&
+             data.score1 is int && data.score1 >= 0 &&
+             data.score2 is int && data.score2 >= 0 &&
+             data.status is string && (data.status == 'pending' || data.status == 'live' || data.status == 'completed') &&
+             data.date is string && data.date.size() <= 50 &&
+             (!data.keys().hasAny(['round']) || (data.round is int && data.round >= 0)) &&
+             (!data.keys().hasAny(['court']) || (data.court is string && data.court.size() <= 100));
+    }
+
+    function isValidStateActive(data) {
+      return data.keys().hasAll(['activeMatches', 'activeTeams', 'courtCount']) &&
+             data.activeMatches is list &&
+             data.activeTeams is list &&
+             data.courtCount is int && data.courtCount >= 1 &&
+             (!data.keys().hasAny(['activeMatchId']) || (data.activeMatchId == null || (data.activeMatchId is string && data.activeMatchId.size() <= 128)));
+    }
+
+    // Rules for Players
+    match /players/{playerId} {
+      allow read: if true;
+      allow create, update: if isValidId(playerId) && isValidPlayer(request.resource.data);
+      allow delete: if isValidId(playerId);
+    }
+
+    // Rules for Tournaments
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow create, update: if isValidId(tournamentId) && isValidTournament(request.resource.data);
+      allow delete: if isValidId(tournamentId);
+    }
+
+    // Rules for Matches
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, update: if isValidId(matchId) && isValidMatch(request.resource.data);
+      allow delete: if isValidId(matchId);
+    }
+
+    // Rules for State
+    match /state/{stateId} {
+      allow read: if true;
+      allow create, update: if isValidId(stateId) && isValidStateActive(request.resource.data);
+      allow delete: if isValidId(stateId);
+    }
+  }
+}

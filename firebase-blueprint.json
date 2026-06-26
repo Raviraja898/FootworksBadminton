@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "Represents a badminton player",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "joinedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "joinedAt"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "Represents a single match within a tournament",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tournamentId": { "type": "string" },
+        "team1": { "type": "array" },
+        "team2": { "type": "array" },
+        "score1": { "type": "integer" },
+        "score2": { "type": "integer" },
+        "status": { "type": "string", "enum": ["pending", "live", "completed"] },
+        "date": { "type": "string" },
+        "round": { "type": "integer" },
+        "court": { "type": "string" }
+      },
+      "required": ["id", "tournamentId", "team1", "team2", "score1", "score2", "status", "date"]
+    },
+    "Tournament": {
+      "title": "Tournament",
+      "description": "Represents a badminton tournament",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "winner1Id": { "type": "string" },
+        "winner2Id": { "type": "string" },
+        "runnerUp1Id": { "type": "string" },
+        "runnerUp2Id": { "type": "string" },
+        "scoreSummary": { "type": "string" },
+        "isHistorical": { "type": "boolean" }
+      },
+      "required": ["id", "name", "date", "winner1Id", "isHistorical"]
+    },
+    "StateActive": {
+      "title": "StateActive",
+      "description": "Represents the active states of the tournament arena",
+      "type": "object",
+      "properties": {
+        "activeMatches": { "type": "array" },
+        "activeTeams": { "type": "array" },
+        "activeMatchId": { "type": "string" },
+        "courtCount": { "type": "integer" }
+      },
+      "required": ["activeMatches", "activeTeams", "activeMatchId", "courtCount"]
+    }
+  },
+  "firestore": {
+    "/players/{playerId}": {
+      "schema": "Player",
+      "description": "Badminton players"
+    },
+    "/tournaments/{tournamentId}": {
+      "schema": "Tournament",
+      "description": "Badminton tournaments"
+    },
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Badminton matches"
+    },
+    "/state/{stateId}": {
+      "schema": "StateActive",
+      "description": "Active state of matches and courts"
+    }
+  }
+}
