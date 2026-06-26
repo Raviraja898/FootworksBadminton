@@ -3,7 +3,7 @@ import { Player, Match, CompletedTournamentResults } from "../types";
 import { shuffleArray, calculateTeamStandings } from "../utils/badminton";
 import { 
   Users, Shuffle, Play, CheckCircle, RefreshCw, Calendar, 
-  ArrowRight, UserPlus, Trash2, Edit3, Check, X, ShieldAlert, Award, Trophy, Medal
+  ArrowRight, UserPlus, Trash2, Edit3, Check, X, ShieldAlert, Award, Trophy, Medal, Plus
 } from "lucide-react";
 
 interface Team {
@@ -193,6 +193,20 @@ export default function TournamentArena({
 
   const handleUpdateTeamName = (teamId: string, newName: string) => {
     setManualTeams(prev => prev.map(t => t.id === teamId ? { ...t, name: newName } : t));
+  };
+
+  const handleAddManualTeam = () => {
+    const nextIdx = manualTeams.length;
+    const newTeam: Team = {
+      id: `t-manual-${nextIdx}-${Date.now()}`,
+      name: `Team ${nextIdx + 1}`,
+      playerIds: []
+    };
+    setManualTeams(prev => [...prev, newTeam]);
+  };
+
+  const handleRemoveManualTeam = (teamId: string) => {
+    setManualTeams(prev => prev.filter(t => t.id !== teamId));
   };
 
   const handleAutoAssignRemaining = () => {
@@ -1283,15 +1297,25 @@ export default function TournamentArena({
                       </p>
                     </div>
 
-                    {selectedPlayerIds.filter(id => !manualTeams.flatMap(t => t.playerIds).includes(id)).length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={handleAutoAssignRemaining}
-                        className="self-start px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-100 cursor-pointer flex items-center gap-1.5"
+                        onClick={handleAddManualTeam}
+                        className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200 cursor-pointer flex items-center gap-1.5"
                       >
-                        <Shuffle className="h-3.5 w-3.5" /> Auto-Assign Remaining ({selectedPlayerIds.filter(id => !manualTeams.flatMap(t => t.playerIds).includes(id)).length})
+                        <Plus className="h-3.5 w-3.5 text-emerald-600" /> Add New Team
                       </button>
-                    )}
+
+                      {selectedPlayerIds.filter(id => !manualTeams.flatMap(t => t.playerIds).includes(id)).length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleAutoAssignRemaining}
+                          className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-colors border border-emerald-100 cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Shuffle className="h-3.5 w-3.5" /> Auto-Assign Remaining ({selectedPlayerIds.filter(id => !manualTeams.flatMap(t => t.playerIds).includes(id)).length})
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Unassigned Pool Preview */}
@@ -1340,6 +1364,14 @@ export default function TournamentArena({
                             <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase shrink-0">
                               {format === "doubles" ? `${team.playerIds.length}/2` : `${team.playerIds.length} Players`}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveManualTeam(team.id)}
+                              className="text-slate-400 hover:text-rose-600 transition-colors p-1 rounded-lg hover:bg-rose-50 cursor-pointer shrink-0"
+                              title="Delete Team"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
 
                           {/* Player List */}

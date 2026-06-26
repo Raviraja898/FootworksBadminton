@@ -418,6 +418,144 @@ export default function App() {
     }
   };
 
+  const currentBackupObj = {
+    version: 1,
+    backupDate: new Date().toISOString(),
+    players,
+    tournaments,
+    matches,
+    activeState: {
+      activeMatches,
+      activeTeams,
+      activeMatchId,
+      courtCount,
+      podiumResults
+    }
+  };
+
+  const handleRestoreBackup = async (backup: any) => {
+    if (!backup || typeof backup !== "object") {
+      throw new Error("Invalid backup format.");
+    }
+
+    const restoredPlayers = backup.players || [];
+    const restoredTournaments = backup.tournaments || [];
+    const restoredMatches = backup.matches || [];
+    const activeState = backup.activeState || {};
+    const restoredActiveMatches = activeState.activeMatches || [];
+    const restoredActiveTeams = activeState.activeTeams || [];
+    const restoredActiveMatchId = activeState.activeMatchId || null;
+    const restoredCourtCount = typeof activeState.courtCount === "number" ? activeState.courtCount : 2;
+    const restoredPodiumResults = activeState.podiumResults || null;
+
+    if (db) {
+      // 1. Delete all current data in Firestore
+      for (const p of players) {
+        try { await deleteDoc(doc(db, "players", p.id)); } catch (err) { console.error("Restore delete player err:", err); }
+      }
+      for (const t of tournaments) {
+        try { await deleteDoc(doc(db, "tournaments", t.id)); } catch (err) { console.error("Restore delete tournament err:", err); }
+      }
+      for (const m of matches) {
+        try { await deleteDoc(doc(db, "matches", m.id)); } catch (err) { console.error("Restore delete match err:", err); }
+      }
+
+      // 2. Set restored data in Firestore
+      for (const p of restoredPlayers) {
+        await setDoc(doc(db, "players", p.id), p);
+      }
+      for (const t of restoredTournaments) {
+        await setDoc(doc(db, "tournaments", t.id), t);
+      }
+      for (const m of restoredMatches) {
+        await setDoc(doc(db, "matches", m.id), m);
+      }
+
+      // 3. Sync active state
+      await updateActiveStateInFirestore(
+        restoredActiveMatches,
+        restoredActiveTeams,
+        restoredActiveMatchId,
+        restoredCourtCount,
+        restoredPodiumResults
+      );
+    } else {
+      // Offline fallback
+      setPlayers(restoredPlayers);
+      setTournaments(restoredTournaments);
+      setMatches(restoredMatches);
+      setActiveMatches(restoredActiveMatches);
+      setActiveTeams(restoredActiveTeams);
+      setActiveMatchId(restoredActiveMatchId);
+      setCourtCount(restoredCourtCount);
+      setPodiumResults(restoredPodiumResults);
+
+      localStorage.setItem("fw_players", JSON.stringify(restoredPlayers));
+      localStorage.setItem("fw_tournaments", JSON.stringify(restoredTournaments));
+      localStorage.setItem("fw_matches", JSON.stringify(restoredMatches));
+      localStorage.setItem("fw_active_matches", JSON.stringify(restoredActiveMatches));
+      localStorage.setItem("fw_active_teams", JSON.stringify(restoredActiveTeams));
+      if (restoredActiveMatchId) {
+        localStorage.setItem("fw_active_match_id", restoredActiveMatchId);
+      } else {
+        localStorage.removeItem("fw_active_match_id");
+      }
+      localStorage.setItem("fw_court_count", String(restoredCourtCount));
+      if (restoredPodiumResults) {
+        localStorage.setItem("fw_active_podium", JSON.stringify(restoredPodiumResults));
+      } else {
+        localStorage.removeItem("fw_active_podium");
+      }
+    }
+  };
+
+  // Automatic daily snapshots
+  useEffect(() => {
+    if (players.length === 0) return;
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    const lastBackupDate = localStorage.getItem("fw_last_auto_backup_date");
+
+    if (lastBackupDate !== todayStr) {
+      const backupObj = {
+        version: 1,
+        backupDate: new Date().toISOString(),
+        players,
+        tournaments,
+        matches,
+        activeState: {
+          activeMatches,
+          activeTeams,
+          activeMatchId,
+          courtCount,
+          podiumResults
+        }
+      };
+
+      let autoBackupsList: any[] = [];
+      try {
+        const saved = localStorage.getItem("fw_auto_backups_list");
+        autoBackupsList = saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        autoBackupsList = [];
+      }
+
+      const alreadyHasToday = autoBackupsList.some((bk) => bk.date === todayStr);
+      if (!alreadyHasToday) {
+        const newBackupItem = {
+          id: `backup-${todayStr}-${Date.now()}`,
+          date: todayStr,
+          timestamp: new Date().toISOString(),
+          data: backupObj
+        };
+        const updatedList = [newBackupItem, ...autoBackupsList].slice(0, 14); // Keep last 14 days
+        localStorage.setItem("fw_auto_backups_list", JSON.stringify(updatedList));
+        localStorage.setItem("fw_last_auto_backup_date", todayStr);
+        console.log(`[Automatic Backup] Snapshot created for date: ${todayStr}`);
+      }
+    }
+  }, [players, tournaments, matches, activeMatches, activeTeams, activeMatchId, courtCount, podiumResults]);
+
   // Tournament Actions
   const handleStartTournament = async (
     format: "singles" | "doubles" | "teams",
@@ -954,6 +1092,8 @@ export default function App() {
             onResetToDefaults={handleResetToDefaults}
             onClearScores={handleClearScores}
             onClearAllData={handleClearAllData}
+            currentBackupObj={currentBackupObj}
+            onRestoreBackup={handleRestoreBackup}
           />
         )}
       </main>
